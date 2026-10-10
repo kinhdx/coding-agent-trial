@@ -1,0 +1,24 @@
+id: loan-term-step
+repo: loan-dossier-intake
+base: 9911ab8
+fix: 7460dad
+prompt: |
+  The product offers loan terms in steps of 6 months (6, 12, 18 ... 60), but a form asking for
+  "7 tháng" passes the term check because only the minimum and maximum are compared.
+
+  Expected behaviour:
+  - Add the step to the policy thresholds as term_step_months (value 6) next to min_term_months and
+    max_term_months, and load it with the other thresholds.
+  - A term that is not a multiple of term_step_months raises the existing TERM_OUT_OF_RANGE finding on
+    field "term_months", so the dossier goes to REVIEW.
+hidden:
+  file: tests/test_checks.py
+  code: |
+    def test_hidden_off_step_term_goes_to_review(limits, as_of):
+        clean = next(load_expected(p) for p in sorted(FIXTURES.iterdir()) if load_expected(p)["defect"] == "clean")
+        docs = truth_documents(clean, scanned=True)
+        form = next(d for d in docs if d.doc_type == DocType.APPLICATION_FORM)
+        form.fields["term_months"] = ExtractedField("7 tháng", "")
+        findings, _ = run_checks(docs, limits, as_of)
+        assert decide(findings) == Decision.REVIEW
+        assert any(f.code == "TERM_OUT_OF_RANGE" and f.field == "term_months" for f in findings)

@@ -1,0 +1,46 @@
+[project]
+name = "coding-agent-trial"
+version = "0.1.0"
+description = "Runs real bug-fix tasks through coding-agent harnesses in sandboxes and measures pass rate, cost and time"
+readme = "README.md"
+authors = [
+    { name = "kinhdx", email = "kinhdx@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "agent-client-protocol>=0.12.1",
+    "httpx>=0.28.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1",
+    "opentelemetry-sdk>=1.45.1",
+    "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
+    "starlette>=1.7.0",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+trial = "trial.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "trial"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+]

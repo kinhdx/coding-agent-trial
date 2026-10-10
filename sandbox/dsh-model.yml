@@ -1,0 +1,10 @@
+# Overlay for `dsh --profile acp`: the shipped profile pins deepseek-v4-flash for ACP sessions and offers no
+# session option to change it, so the trial selects the model here. A patch replaces an entry's whole config.
+- id: acp
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro
+- id: agent-default-model
+  config:
+    provider: deepseek-official
+    model: deepseek-v4-pro

@@ -1,0 +1,5 @@
+FROM trial-base
+USER root
+RUN npm install -g @deepseek-ai/dsh@0.2.0-rc.2 && npm cache clean --force
+COPY sandbox/dsh-model.yml /etc/dsh/model.yml
+USER agent

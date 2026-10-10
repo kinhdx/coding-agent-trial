@@ -1,0 +1,19 @@
+id: registry-production-no-evaluation
+repo: agent-asset-registry
+base: c7360d0
+fix: cc4ab41
+prompt: |
+  check() raises an exception on a manifest with maturity: production and no evaluation section,
+  instead of reporting it. One broken manifest stops `registry validate` before it reports the
+  problems in the other manifests.
+
+  Expected behaviour of check():
+  - A production (or validated) asset without an evaluation section returns a problem whose message
+    is "validated requires an evaluation", and no exception escapes.
+hidden:
+  file: tests/test_validate.py
+  code: |
+    def test_hidden_production_without_evaluation_reports_instead_of_crashing(validated):
+        validated["maturity"] = "production"
+        del validated["evaluation"]
+        assert "validated requires an evaluation" in codes(check(validated, TODAY))

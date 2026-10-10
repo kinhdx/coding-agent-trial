@@ -1,0 +1,24 @@
+id: registry-stale-catalog-json
+repo: agent-asset-registry
+base: c7360d0
+fix: cc4ab41
+prompt: |
+  `registry catalog --check` compares only CATALOG.md with what the manifests would generate. A
+  catalog.json that was edited by hand, or not regenerated, passes CI.
+
+  Expected behaviour:
+  - Add stale(assets, root) to registry.catalog. It returns the names of the committed catalog files
+    under root that differ from what write(assets, root) would produce, as a list such as
+    ["catalog.json"], and an empty list when both files are current. Compare catalog.json by its
+    parsed content, so formatting alone does not count as a difference.
+  - `registry catalog --check` uses stale() and fails when either file is out of date.
+hidden:
+  file: tests/test_validate.py
+  code: |
+    def test_hidden_stale_catalog_json_is_detected(tmp_path):
+        from registry.catalog import stale, write
+        assets, _ = check_all(ASSETS, TODAY)
+        write(assets, tmp_path)
+        assert stale(assets, tmp_path) == []
+        (tmp_path / "catalog.json").write_text("[]", encoding="utf-8")
+        assert stale(assets, tmp_path) == ["catalog.json"]

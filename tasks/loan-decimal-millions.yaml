@@ -1,0 +1,22 @@
+id: loan-decimal-millions
+repo: loan-dossier-intake
+base: 9911ab8
+fix: 7460dad
+prompt: |
+  parse_amount reads "1.5 triệu" as 15 million instead of 1.5 million: every dot is treated as a
+  thousands separator, even when it is a decimal point before the unit word.
+
+  Expected behaviour, for amounts written with "triệu" or "tr":
+  - A final separator (dot or comma) followed by one or two digits is a decimal point:
+    "1.5 triệu" is 1,500,000 and "15,5 triệu" is 15,500,000.
+  - Other separators group thousands: "1.500 triệu" is 1,500,000,000.
+  - Existing behaviour for plain amounts such as "8.500.000đ" and for unreadable text stays the same.
+hidden:
+  file: tests/test_normalize.py
+  code: |
+    def test_hidden_decimal_millions():
+        assert parse_amount("1.5 triệu") == 1_500_000
+        assert parse_amount("15,5 triệu") == 15_500_000
+        assert parse_amount("1.500 triệu") == 1_500_000_000
+        assert parse_amount("8.500.000đ") == 8_500_000
+        assert parse_amount("không rõ") is None

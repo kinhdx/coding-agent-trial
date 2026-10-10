@@ -1,0 +1,25 @@
+id: loan-damaged-upload
+repo: loan-dossier-intake
+base: 9911ab8
+fix: 7460dad
+prompt: |
+  POST /dossiers returns 500 when a client uploads a file with a supported extension whose content is
+  damaged, for example a .png or .pdf that holds a few bytes of text. pymupdf raises and the error
+  escapes the handler.
+
+  Expected behaviour:
+  - A damaged file with a supported extension is rejected with HTTP 422 and a message naming the file.
+  - An unsupported file type is still rejected with 415.
+hidden:
+  file: tests/test_api.py
+  code: |
+    import pytest
+
+
+    @pytest.mark.parametrize("name", ["scan.png", "form.pdf"])
+    def test_hidden_damaged_file_is_rejected(tmp_path, name):
+        api.app.dependency_overrides[api.get_store] = lambda: Store(tmp_path / "test.db")
+        api.app.dependency_overrides[api.get_client] = lambda: None
+        response = TestClient(api.app).post("/dossiers", files=[("files", (name, b"not really a file", "image/png"))])
+        assert response.status_code == 422
+        api.app.dependency_overrides.clear()

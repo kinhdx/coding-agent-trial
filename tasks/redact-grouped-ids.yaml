@@ -1,0 +1,20 @@
+id: redact-grouped-ids
+repo: llm-service-starter
+base: 95fa084
+fix: a0df0ba
+prompt: |
+  The redactor misses identifiers that customers write in groups. In
+  "CCCD 001 190 012 345, CMND 012-345-678, gọi 090-123-4567" nothing is masked, so the citizen ID,
+  the old ID card number and the phone number reach the model and the logs.
+
+  Expected behaviour of redact():
+  - A 12-digit citizen ID or a 9-digit old ID written as groups of three digits separated by spaces or
+    hyphens becomes [ID_NUMBER], as the undivided forms already do.
+  - A Vietnamese mobile number with spaces, dots or hyphens between digits becomes [PHONE].
+  - Amounts and transaction codes stay unchanged, as they do today.
+hidden:
+  file: tests/test_redact.py
+  code: |
+    def test_hidden_grouped_id_numbers_and_hyphenated_phones():
+        r = redact("CCCD 001 190 012 345, CMND 012-345-678, gọi 090-123-4567")
+        assert r.text == "CCCD [ID_NUMBER], CMND [ID_NUMBER], gọi [PHONE]"

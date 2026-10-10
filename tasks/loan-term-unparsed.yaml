@@ -1,0 +1,38 @@
+id: loan-term-unparsed
+repo: loan-dossier-intake
+base: 9911ab8
+fix: 7460dad
+prompt: |
+  Loan terms that the parser cannot read are silently ignored. When the application form says
+  "ba mươi sáu tháng" or "3 năm 6 tháng", parse_term_months returns a number or nothing, and the
+  dossier can end up READY because the term, age-at-maturity and debt-to-income checks are skipped.
+
+  Expected behaviour:
+  - parse_term_months accepts a number of months ("24 tháng", "36"), or a number of years ("3 năm",
+    "5 năm." with a trailing full stop), and returns the term in months.
+  - Anything else, including mixed units such as "3 năm 6 tháng" and numbers written in words,
+    returns None.
+  - A term_months field that does not parse produces a FORMAT_INVALID finding on field
+    "term_months", so the dossier goes to REVIEW.
+hidden:
+  file: tests/test_checks.py
+  code: |
+    @pytest.mark.parametrize("term", ["ba mươi sáu tháng", "3 năm 6 tháng"])
+    def test_hidden_unreadable_term_goes_to_review(term, limits, as_of):
+        clean = next(load_expected(p) for p in sorted(FIXTURES.iterdir()) if load_expected(p)["defect"] == "clean")
+        docs = truth_documents(clean, scanned=True)
+        form = next(d for d in docs if d.doc_type == DocType.APPLICATION_FORM)
+        form.fields["term_months"] = ExtractedField(term, "")
+        findings, _ = run_checks(docs, limits, as_of)
+        assert decide(findings) == Decision.REVIEW
+        assert any(f.code == "FORMAT_INVALID" and f.field == "term_months" for f in findings)
+
+
+    def test_hidden_parse_term_months():
+        from loan_intake.normalize import parse_term_months
+        assert parse_term_months("3 năm") == 36
+        assert parse_term_months("24 tháng") == 24
+        assert parse_term_months("5 năm.") == 60
+        assert parse_term_months("36") == 36
+        assert parse_term_months("3 năm 6 tháng") is None
+        assert parse_term_months("ba mươi sáu tháng") is None

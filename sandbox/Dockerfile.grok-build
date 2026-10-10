@@ -1,0 +1,5 @@
+FROM trial-base
+USER root
+# The version the AI SDK Grok Build adapter pins in its bridge.
+RUN npm install -g @xai-official/grok@1.0.49 && npm cache clean --force
+USER agent

@@ -1,0 +1,20 @@
+id: registry-deprecation-block
+repo: agent-asset-registry
+base: c7360d0
+fix: cc4ab41
+prompt: |
+  An asset can be marked maturity: deprecated without saying what replaces it or when it will be
+  removed. The README says a deprecated asset must carry a deprecation block, but validation accepts
+  the manifest.
+
+  Expected behaviour of check():
+  - A deprecated asset without a deprecation block is reported as a problem whose message contains
+    "deprecation block".
+  - Deprecated assets that have the block, and assets at other maturity levels, are unaffected.
+hidden:
+  file: tests/test_validate.py
+  code: |
+    def test_hidden_deprecated_without_a_deprecation_block_is_rejected(validated):
+        validated["maturity"] = "deprecated"
+        validated.pop("deprecation", None)
+        assert any("deprecation block" in m for m in codes(check(validated, TODAY)))

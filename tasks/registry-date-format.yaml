@@ -1,0 +1,22 @@
+id: registry-date-format
+repo: agent-asset-registry
+base: c7360d0
+fix: cc4ab41
+prompt: |
+  The schema declares operations.last_review and other dates with format: date, but validation
+  accepts last_review: "soon". JSON Schema formats are annotations unless the validator is given a
+  format checker.
+
+  Expected behaviour of check():
+  - Values that do not match their declared format are reported as schema problems, with the same
+    "schema:" prefix and field location as other schema errors (for example a message that mentions
+    last_review).
+  - The registered assets in assets/ stay valid.
+hidden:
+  file: tests/test_validate.py
+  code: |
+    def test_hidden_dates_are_checked_against_their_format(validated):
+        validated["maturity"] = "production"
+        validated["operations"] = {"runbook": "x", "dashboard": "x", "on_call": "x", "risk_approval": "x",
+                                   "last_review": "soon"}
+        assert any("schema:" in m and "last_review" in m for m in codes(check(validated, TODAY)))

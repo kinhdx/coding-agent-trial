@@ -1,0 +1,18 @@
+id: redact-short-account-labels
+repo: llm-service-starter
+base: 95fa084
+fix: a0df0ba
+prompt: |
+  Account numbers after the short labels "TK" and "số TK" are not treated as account numbers.
+  "TK 0123456789 và số TK: 9876543210" should keep the labels and mask both numbers.
+
+  Expected behaviour of redact():
+  - "TK" and "số TK" (any letter case, optional colon or #) count as account labels, like "STK" and
+    "số tài khoản" already do.
+  - The label stays in the text and only the number becomes [ACCOUNT]:
+    "TK [ACCOUNT] và số TK: [ACCOUNT]".
+hidden:
+  file: tests/test_redact.py
+  code: |
+    def test_hidden_short_account_labels():
+        assert redact("TK 0123456789 và số TK: 9876543210").text == "TK [ACCOUNT] và số TK: [ACCOUNT]"

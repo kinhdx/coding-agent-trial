@@ -1,0 +1,4 @@
+FROM trial-base
+USER root
+RUN npm install -g @agentclientprotocol/claude-agent-acp@0.89.1 && npm cache clean --force
+USER agent

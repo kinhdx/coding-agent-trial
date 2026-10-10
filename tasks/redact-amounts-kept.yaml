@@ -1,0 +1,20 @@
+id: redact-amounts-kept
+repo: llm-service-starter
+base: 95fa084
+fix: a0df0ba
+prompt: |
+  Loan amounts written without separators are masked as ID numbers. In
+  "Vay 500000000đ, trả 120000000000 VND" the 9-digit and 12-digit amounts become [ID_NUMBER], so the
+  model loses the amounts it needs to triage the complaint.
+
+  Expected behaviour of redact():
+  - A digit run followed by a currency word (đ, đồng, vnđ, vnd, dong, with or without a space, any
+    letter case) is an amount and stays unchanged.
+  - The same digit run without a currency word is still masked as an ID number.
+hidden:
+  file: tests/test_redact.py
+  code: |
+    def test_hidden_undelimited_amounts_are_not_id_numbers():
+        text = "Vay 500000000đ, trả 120000000000 VND"
+        assert redact(text).text == text
+        assert redact("CCCD 001190012345").text == "CCCD [ID_NUMBER]"
