@@ -1,11 +1,13 @@
 # Harness radar, October 2026
 
-One entry per harness measured in trial `main` (11 tasks, one attempt each, 2026-10-11). Rings follow the
-usual radar meaning: **Trial** means use it in a pilot on real work with review, **Assess** means keep
-measuring before a pilot, **Hold** means do not start new use.
+One entry per harness measured in two trials on 2026-10-11: `main` (11 tasks whose bug reports name the
+behaviour to change, two attempts each) and `symptoms` (4 tasks whose reports describe only what a user sees,
+three attempts each). Rings follow the usual radar meaning: **Trial** means use it in a pilot on real work
+with review, **Assess** means keep measuring before a pilot, **Hold** means do not start new use.
 
-The task set did not separate the harnesses on quality: all three resolved 11 of 11. The calls below rest
-on cost, time, containment and maturity of the release, and each one names what would change it.
+Neither task set separated the harnesses on quality: all three resolved all 34 of their runs, including the
+reports that leave the cause to be found. The calls below rest on cost, time, containment and maturity of the
+release, and each one names what would change it.
 
 | Harness | Ring | Registry entry |
 |---|---|---|
@@ -15,7 +17,8 @@ on cost, time, containment and maturity of the release, and each one names what 
 
 ## Claude Code: Trial
 
-- Median 27 s and 5 tool calls per task, the shortest of the three; 0.099 USD per fix.
+- Fastest in both trials: median 41 s and 5 tool calls in `main`, 48 s and 6 in `symptoms`. 0.113 and
+  0.098 USD per fix; the cheapest of the three when the cause had to be found.
 - Asks for permission before tools, so the sandbox policy (no fetch tools, no writes outside the workspace)
   applies on top of the network isolation.
 - Needs `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`; without it the CLI tries to reach `api.anthropic.com`
@@ -24,15 +27,21 @@ on cost, time, containment and maturity of the release, and each one names what 
 
 ## Grok Build: Trial, with a per-run cost cap
 
-- Resolved everything, but at 0.199 USD per fix, twice Claude Code, with a median of 211 s and 29 tool calls.
-- Cost spread is wide: one run cost 0.69 USD against a median of 0.17 USD. A pilot should set a per-run cap.
-- The CLI closes some streams before the provider sends usage (12 calls in the trial), so a part of its cost
-  is invisible to a gateway that prices from usage. Billing totals from the provider dashboard are the check.
-- Would move to Assess if the closed-stream share grows, or if a harder set shows no quality edge to pay for.
+- Resolved everything, but cost the most in both trials: 0.192 USD per fix in `main` and 0.302 in
+  `symptoms`, against a median of 262 s and 32 tool calls in `main`.
+- Cost spread is wide: 0.07 to 0.69 USD per run in `main`, against a median of 0.18 USD. A pilot should set a
+  per-run cap.
+- The CLI closes some streams before the provider sends usage (11 calls in each trial), so a part of its
+  cost is invisible to a gateway that prices from usage. Billing totals from the provider dashboard are the
+  check.
+- Would move to Assess if the closed-stream share grows, or if a harder set still shows no quality edge to pay
+  for.
 
 ## dsh: Assess
 
-- Cheapest at 0.077 USD per fix (DeepSeek peak rate), median 139 s and 17 tool calls.
+- Cheapest when the report names the behaviour: 0.078 USD per fix in `main` (DeepSeek peak rate), median
+  160 s and 18 tool calls. When the cause had to be found its median rose to 31 tool calls and 0.134 USD per
+  fix, above Claude Code.
 - Two reasons it is not in Trial despite meeting every threshold: the version measured is 0.2.0-rc.2, a
   release candidate, and in `workspace-write` mode it runs tools without asking for permission, so its
   containment is the sandbox and the network alone.
@@ -42,7 +51,7 @@ on cost, time, containment and maturity of the release, and each one names what 
 
 ## What to measure next
 
-- A harder task set: fixes that span several files, or bug reports that leave the cause to be found. With
-  every harness at 100%, the current set cannot show a quality difference.
-- Attempts 2 and 3 on each task, to see how stable the results and costs are.
+- Tasks that fail for some harness. Symptom-only reports on single-service bugs were not enough; the next
+  step is bugs whose cause sits in a different module from the symptom, or in configuration rather than code.
 - Agent time on a machine where runs do not share CPUs.
+- Provider billing totals against the gateway's totals, to size the cost Grok Build's closed streams hide.

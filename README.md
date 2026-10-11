@@ -10,28 +10,46 @@ should not.
 
 ## Results
 
-Trial `main`: 11 tasks, one attempt each, three harnesses driven over the Agent Client Protocol.
-Full table in [results/main/report.md](results/main/report.md).
+Two trials, three harnesses driven over the Agent Client Protocol.
+
+Trial `main`: 11 tasks whose bug reports name the behaviour to change, two attempts each
+([results/main/report.md](results/main/report.md)).
 
 | Harness | Model | Resolved | Cost (USD) | USD per resolved | Median agent time (s) | Median tool calls |
 |---|---|---|---|---|---|---|
-| Claude Code | claude-sonnet-5-5 | 11/11 | 1.09 | 0.099 | 27 | 5 |
-| dsh | deepseek-v4-pro | 11/11 | 0.85 | 0.077 | 139 | 17 |
-| Grok Build | grok-build-0.1 | 11/11 | 2.18 | 0.199 | 211 | 29 |
+| Claude Code | claude-sonnet-5-5 | 22/22 | 2.50 | 0.113 | 41 | 5 |
+| dsh | deepseek-v4-pro | 22/22 | 1.72 | 0.078 | 160 | 18 |
+| Grok Build | grok-build-0.1 | 22/22 | 4.23 | 0.192 | 262 | 32 |
+
+Trial `symptoms`: 4 tasks whose bug reports describe only what a user sees, so the agent has to find the
+cause; one needs changes in two modules. Three attempts each
+([results/symptoms/report.md](results/symptoms/report.md)).
+
+| Harness | Model | Resolved | Cost (USD) | USD per resolved | Median agent time (s) | Median tool calls |
+|---|---|---|---|---|---|---|
+| Claude Code | claude-sonnet-5-5 | 12/12 | 1.18 | 0.098 | 48 | 6 |
+| dsh | deepseek-v4-pro | 12/12 | 1.61 | 0.134 | 175 | 31 |
+| Grok Build | grok-build-0.1 | 12/12 | 3.63 | 0.302 | 239 | 37 |
 
 What these numbers support:
 
-- All three fixed every task, so this task set does not separate them on quality. It separates them on cost
-  and time: dsh was cheapest per fix, Claude Code fastest with the fewest tool calls, Grok Build slowest and
-  most expensive.
+- All three resolved all 102 runs, the symptom-only reports included, so neither task set separates them on
+  quality. They separate on cost and time. Claude Code was fastest with the fewest tool calls in both trials.
+  dsh was cheapest per fix when the report named the behaviour, and Claude Code when the cause had to be
+  found, where dsh's median tool calls rose from 18 to 31. Grok Build was the slowest and most expensive in both.
+- Cost per run varies more for Grok Build: 0.07 to 0.69 USD in `main`, against 0.05 to 0.22 USD for Claude
+  Code and 0.03 to 0.17 USD for dsh.
 - No run tried to reach a host outside the provider route.
-- Four runs edited files outside `src/` and `tests/`. On the task that adds a staleness check for the
-  committed catalog, all three harnesses also regenerated `CATALOG.md` and `catalog.json`. dsh rewrote
-  `evals/report.md` on another task by running the evaluation script; the text is unchanged.
-- Grok Build's total misses 12 calls whose stream the CLI closed before the provider sent usage. The gateway
-  now records this case (see [Cost accounting](#cost-accounting)); those 12 lines predate the change.
-- One attempt per task. The agent times were measured with three sandboxes sharing 8 CPUs, so read them as a
-  ranking, not as a latency figure.
+- Out-of-scope edits come from two tasks. On the task that adds a staleness check for the committed catalog,
+  every run also regenerated `catalog.json`, and most regenerated `CATALOG.md`. dsh rewrote `evals/report.md`
+  once by running the evaluation script; the text is unchanged.
+- Some runs were cut off by a host that ran out of memory or by an exhausted provider credit, and were run
+  again; only the complete runs are counted. The cost totals still include about 0.10 USD (Claude Code),
+  0.06 USD (dsh) and 0.61 USD (Grok Build) spent by the cut-off runs.
+- Grok Build's totals miss calls whose stream the CLI closed before the provider sent usage, 11 in each
+  trial. See [Cost accounting](#cost-accounting).
+- Agent times were measured with one to three sandboxes sharing 8 CPUs, so read them as a ranking, not as a
+  latency figure.
 
 Trial `sdk-check` runs one task through the AI SDK HarnessAgent adapters for Claude Code and Grok Build
 ([results/sdk-check/report.md](results/sdk-check/report.md)). Both resolved it. Before the agent's turn, the
@@ -105,14 +123,15 @@ container receives them.
 uv sync
 uv run trial build                      # sandbox, harness, gateway and runner images
 uv run trial validate                   # hidden tests fail at the start commit, pass with the fix
-uv run trial run main --attempts 3 --concurrency 2 --budget 20
+uv run trial run main --attempts 2 --concurrency 2 --budget 20
 uv run trial run-agent sdk --task registry-deprecation-block
 uv run trial report main
 ```
 
 A trial resumes: runs already in `results/<trial>/runs.jsonl` are skipped. The budget covers every trial that
-shares `results/ledger`. Each sandbox is limited to 4 GB of memory and 2 CPUs; size `--concurrency` to the
-memory Docker has.
+shares `results/ledger`. Each sandbox and grading container is limited to 2 GB of memory with no swap and to
+2 CPUs. `trial run` lowers `--concurrency` when the requested number of runs would not fit in the memory of
+the Docker VM, since an overcommitted VM swaps and can stall the host.
 
 ## Layout
 

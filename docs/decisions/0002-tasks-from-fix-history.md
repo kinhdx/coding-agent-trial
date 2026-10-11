@@ -25,8 +25,13 @@ reviewer would raise it, and the tests the fix added, which become the hidden te
 
 - The numbers describe these repositories and these bug types: input parsing, redaction rules, validation of
   a catalogue. They do not predict results on a large legacy codebase.
-- Eleven tasks with three attempts each is enough to separate a harness that fails often from one that does
-  not, and too few to rank two harnesses that differ by a task or two.
+- Fifteen tasks with two or three attempts each is enough to separate a harness that fails often from one
+  that does not, and too few to rank two harnesses that differ by a task or two.
+- The first eleven bug reports name the behaviour to change. The other four describe only what a user sees
+  (applicants aged 58 or 59 always sent to review, a review queue that holds incomplete dossiers, a 500
+  during a provider outage, a traceback from one bad manifest), and one needs changes in two modules. Their fixes were written for this trial
+  in October 2026, after the first eleven had run, so they test cause-finding on a realistic report rather
+  than recall of a historical commit.
 - Several tasks share a fix commit, so their bug reports are written to describe one symptom each. An agent
   that fixes more than it was asked still passes, and the scope list shows what else it touched.
 - Hidden tests can be stricter than the bug report. A run that fixes the reported symptom in a different way
