@@ -1,0 +1,6 @@
+# Sandbox for HarnessAgent runs. The adapters install their pinned CLI and bridge with pnpm when a session
+# starts; that install goes through the gateway's proxy, which allows the npm registry for these runs only.
+FROM trial-base
+USER root
+RUN npm install -g pnpm@10.34.6 && npm cache clean --force
+USER agent

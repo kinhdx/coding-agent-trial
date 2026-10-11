@@ -4,6 +4,7 @@
     trial validate [--task ID ...]            check that each task's hidden tests fail at the start commit and
                                               pass with the original fix
     trial run NAME [--harness ...] [--task ...] [--attempts N] [--concurrency N] [--budget USD] [--time-limit S]
+    trial run-agent NAME [same options]      the same through AI SDK HarnessAgent adapters (the ts/ runner)
     trial report NAME                         write results/NAME/report.md from results/NAME/runs.jsonl
 """
 from __future__ import annotations
@@ -20,6 +21,7 @@ from dotenv import load_dotenv
 
 from trial import docker
 from trial.grade import grade
+from trial.harness_agent import AGENT_HARNESSES, run_agent_trial
 from trial.harnesses import HARNESSES
 from trial.report import render
 from trial.run import RunSpec, run_trial
@@ -72,12 +74,29 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--concurrency", type=int, default=3)
     r.add_argument("--budget", type=float, default=20.0, help="USD across all trials sharing results/ledger")
     r.add_argument("--time-limit", type=float, default=900, help="seconds per run")
+    a = sub.add_parser("run-agent", help="run tasks through AI SDK HarnessAgent adapters (ts/)")
+    a.add_argument("name")
+    a.add_argument("--harness", nargs="*", default=list(AGENT_HARNESSES), choices=list(AGENT_HARNESSES))
+    a.add_argument("--task", nargs="*")
+    a.add_argument("--attempts", type=int, default=1)
+    a.add_argument("--concurrency", type=int, default=3)
+    a.add_argument("--budget", type=float, default=20.0, help="USD across all trials sharing results/ledger")
+    a.add_argument("--time-limit", type=float, default=900, help="seconds per run")
     p = sub.add_parser("report")
     p.add_argument("name")
     args = parser.parse_args(argv)
 
     if args.command == "build":
         docker.build(args.harness)
+        return 0
+    if args.command in ("run", "run-agent") and not re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.name):
+        parser.error("trial name: lower-case letters, digits and hyphens (it is part of URLs and container names)")
+    if args.command == "run-agent":
+        jobs = [(t, AGENT_HARNESSES[h], n) for n in range(1, args.attempts + 1) for t in load_all(args.task)
+                for h in args.harness]
+        run_agent_trial(RESULTS, args.name, jobs, args.budget, args.concurrency, args.time_limit)
+        (RESULTS / args.name / "report.md").write_text(render(RESULTS / args.name), encoding="utf-8", newline="\n")
+        print(json.dumps({"report": str(RESULTS / args.name / "report.md")}))
         return 0
     if args.command == "validate":
         return asyncio.run(validate(args.task))
@@ -87,8 +106,6 @@ def main(argv: list[str] | None = None) -> int:
         print(out)
         return 0
 
-    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.name):
-        parser.error("trial name: lower-case letters, digits and hyphens (it is part of URLs and container names)")
     trial_dir = RESULTS / args.name
     specs = [RunSpec(args.name, t, HARNESSES[h], n) for n in range(1, args.attempts + 1) for t in load_all(args.task)
              for h in args.harness]

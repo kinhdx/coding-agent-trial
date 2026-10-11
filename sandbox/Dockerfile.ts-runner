@@ -1,0 +1,10 @@
+# Runner for ts/. It drives the Docker engine through the mounted socket and joins the internal network,
+# where each sandbox's bridge port is reached by container name.
+FROM node:24-bookworm-slim
+COPY --from=docker:28.4.0-cli /usr/local/bin/docker /usr/local/bin/docker
+WORKDIR /runner
+COPY ts/package.json ts/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY ts/tsconfig.json ./
+COPY ts/src ./src
+ENTRYPOINT ["npx", "tsx", "src/run.ts"]

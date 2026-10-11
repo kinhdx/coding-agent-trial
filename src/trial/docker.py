@@ -36,6 +36,9 @@ def build(harnesses: list[str]) -> None:
     for name in harnesses:
         sh("docker", "build", "-f", f"sandbox/Dockerfile.{name}", "-t", HARNESSES[name].image, ".", capture=False)
     sh("docker", "build", "-f", "sandbox/Dockerfile.gateway", "-t", "trial-gateway", ".", capture=False)
+    # HarnessAgent runs (ts/): a sandbox with pnpm for the adapters' installs, and the runner itself.
+    sh("docker", "build", "-f", "sandbox/Dockerfile.harness-agent", "-t", "trial-harness-agent", ".", capture=False)
+    sh("docker", "build", "-f", "sandbox/Dockerfile.ts-runner", "-t", "trial-ts-runner", ".", capture=False)
 
 
 def host_path(path: Path) -> str:
