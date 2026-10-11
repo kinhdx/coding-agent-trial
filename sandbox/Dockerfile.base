@@ -14,14 +14,15 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/python \
     UV_PYTHON_PREFERENCE=only-managed
 RUN uv python install 3.12  && git config --system --add safe.directory '*'
 
+# COMMITS lists repo@commit for every task start and fix commit (see `trial build`). Declaring it before the
+# clone means a new task commit invalidates the cached clone. Dependencies download below; the image then sets
+# UV_OFFLINE, so runs and grading install from the cache only.
+ARG COMMITS
 RUN for repo in loan-dossier-intake llm-service-starter agent-asset-registry; do \
       git clone -q "https://github.com/kinhdx/$repo" "/opt/src/$repo"; \
     done
 
 COPY sandbox/prepare-workspace.sh sandbox/grade.sh /usr/local/bin/
-# COMMITS lists repo@commit for every task start and fix commit (see `trial build`). Dependencies download here;
-# the image then sets UV_OFFLINE, so runs and grading install from the cache only.
-ARG COMMITS
 RUN chmod +x /usr/local/bin/prepare-workspace.sh /usr/local/bin/grade.sh \
  && useradd -m -s /bin/bash agent && mkdir /work && chown agent /work \
  && for rc in $COMMITS; do prepare-workspace.sh "${rc%@*}" "${rc#*@}"; done \
