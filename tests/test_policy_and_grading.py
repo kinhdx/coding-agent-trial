@@ -81,7 +81,7 @@ def test_harness_environment_points_at_the_gateway_with_a_placeholder_key():
 
 def test_tasks_load_and_hidden_tests_are_named_for_selection():
     tasks = load_all()
-    assert len(tasks) == 11 and len({t.id for t in tasks}) == 11
+    assert len(tasks) == 15 and len({t.id for t in tasks}) == 15
     for t in tasks:
         assert "def test_hidden_" in t.hidden_code, t.id
         assert t.hidden_file.startswith("tests/test_"), t.id

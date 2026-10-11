@@ -1,0 +1,27 @@
+id: triage-provider-outage
+repo: llm-service-starter
+base: a0df0ba
+fix: f907392
+prompt: |
+  When the model provider cannot be reached or returns an error, POST /triage answers 500 Internal Server
+  Error and the service log shows a traceback from the Anthropic SDK. The API's contract is 502 for a failed
+  model call; a 500 tells the caller the service itself is broken, so clients do not retry.
+
+  Expected behaviour: when the model call fails after the SDK's own retries, POST /triage answers 502 with a
+  short message in "detail", as it already does when the model declines the request.
+hidden:
+  file: tests/test_api.py
+  code: |
+    def test_hidden_provider_outage_answers_502(monkeypatch):
+        from service.llm import AnthropicClient
+
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://127.0.0.1:9")  # nothing listens here
+        client = AnthropicClient(timeout=5.0, max_retries=0)
+        api.app.dependency_overrides[api.get_client] = lambda: client
+        try:
+            response = TestClient(api.app).post("/triage", json={"text": "Thẻ của tôi bị khóa từ sáng"})
+        finally:
+            api.app.dependency_overrides.clear()
+        assert response.status_code == 502
+        assert response.json()["detail"]

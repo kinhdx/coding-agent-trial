@@ -1,0 +1,34 @@
+id: loan-incomplete-review-queue
+repo: loan-dossier-intake
+base: ec851f3
+fix: 4d7a32d
+prompt: |
+  A reviewer can accept a dossier that has no payslip, and it then goes to underwriting as ready. Dossiers
+  missing a required document are listed in the review queue next to the ones that need a reviewer's
+  judgement, although the processing policy (policy/quy-trinh-xu-ly.md) sends them back to the customer.
+
+  Expected behaviour:
+  - A dossier whose decision is incomplete does not appear in GET /review-queue.
+  - POST /dossiers/{id}/review with action "accept" on such a dossier answers 409 and leaves its status
+    unchanged.
+  - Dossiers that need review are queued and reviewed as before.
+hidden:
+  file: tests/test_api.py
+  code: |
+    def test_hidden_incomplete_dossier_is_not_reviewed(tmp_path, fixture_dirs):
+        folder = next(p for p in fixture_dirs if FixtureClient(p).expected["expected_decision"] == "incomplete")
+        store = Store(tmp_path / "test.db")
+        api.app.dependency_overrides[api.get_store] = lambda: store
+        api.app.dependency_overrides[api.get_client] = lambda: FixtureClient(folder)
+        client = TestClient(api.app)
+        files = [("files", (p.name, p.read_bytes(), "application/pdf")) for p in sorted(folder.glob("*.pdf"))]
+        try:
+            created = client.post("/dossiers", files=files).json()
+            assert created["decision"] == "incomplete"
+            assert client.get("/review-queue").json() == []
+            response = client.post(f"/dossiers/{created['id']}/review",
+                                   json={"reviewer": "analyst-01", "action": "accept", "note": "looks fine"})
+            assert response.status_code == 409
+            assert client.get(f"/dossiers/{created['id']}").json()["status"] != "ready"
+        finally:
+            api.app.dependency_overrides.clear()

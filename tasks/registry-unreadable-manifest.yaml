@@ -1,0 +1,30 @@
+id: registry-unreadable-manifest
+repo: agent-asset-registry
+base: b82a88f
+fix: 570f7fb
+prompt: |
+  One manifest with a YAML syntax error makes `registry validate` stop with a Python traceback. The CI log
+  does not say which manifest is broken, and the other manifests are not checked. An empty asset.yaml does
+  the same.
+
+  Expected behaviour: `registry validate` reports each unreadable manifest as a problem line that starts with
+  its folder name (for example "broken: ..."), still checks every other manifest, and exits with 1.
+hidden:
+  file: tests/test_validate.py
+  code: |
+    def test_hidden_unreadable_manifest_is_reported(tmp_path, monkeypatch, capsys):
+        import shutil
+
+        from registry import cli
+
+        shutil.copytree(ASSETS / "complaint-triage", tmp_path / "complaint-triage")
+        (tmp_path / "broken").mkdir()
+        (tmp_path / "broken" / "asset.yaml").write_text("id: broken\nmodels: [claude-haiku-5-5\n", encoding="utf-8")
+        (tmp_path / "empty").mkdir()
+        (tmp_path / "empty" / "asset.yaml").write_text("", encoding="utf-8")
+        monkeypatch.setattr(cli, "ASSETS", tmp_path)
+        assert cli.main(["validate"]) == 1
+        lines = capsys.readouterr().out.splitlines()
+        assert any(line.startswith("broken:") for line in lines)
+        assert any(line.startswith("empty:") for line in lines)
+        assert not any(line.startswith("complaint-triage:") for line in lines)

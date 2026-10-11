@@ -1,0 +1,32 @@
+id: loan-card-without-expiry
+repo: loan-dossier-intake
+base: ec851f3
+fix: 4d7a32d
+prompt: |
+  Every dossier from an applicant aged 58 or 59 goes to review, even when the documents are in order. The
+  ID cards (CCCD) of these applicants print "Không thời hạn" where the expiry date would be: a card issued
+  from the holder's 58th birthday on is valid for life.
+
+  Expected behaviour:
+  - "Không thời hạn" in the expiry field of the ID card, in any letter case, raises no finding when the
+    holder is 58 or older on the assessment date.
+  - For a younger holder the same text is a misread or a sign of a forged card: the dossier still goes to
+    review, with a finding on the expiry date.
+hidden:
+  file: tests/test_checks.py
+  code: |
+    @pytest.mark.parametrize("dob, expiry, flagged", [
+        ("12/02/1967", "Không thời hạn", False),   # 59 on the assessment date
+        ("01/10/1968", "KHÔNG THỜI HẠN", False),   # turns 58 on the assessment date
+        ("02/10/1968", "Không thời hạn", True),    # still 57
+        ("15/04/1990", "Không thời hạn", True),
+    ])
+    def test_hidden_card_without_expiry_date(dob, expiry, flagged, limits, as_of):
+        fields = {"full_name": "PHẠM VĂN HÙNG", "date_of_birth": dob, "id_number": f"0010{dob[-2:]}012345",
+                  "sex": "Nam", "expiry_date": expiry}
+        card = ExtractedDocument("cccd.pdf", DocType.NATIONAL_ID, True,
+                                 {k: ExtractedField(v, "") for k, v in fields.items()})
+        findings, _ = run_checks([card], limits, as_of)
+        on_expiry = [f for f in findings if f.field == "expiry_date"]
+        assert bool(on_expiry) is flagged
+        assert all(f.severity.value == "review" for f in on_expiry)
