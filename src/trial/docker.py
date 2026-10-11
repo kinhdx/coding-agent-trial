@@ -63,7 +63,7 @@ def stop_gateway() -> None:
 
 async def start_sandbox(name: str, image: str, env: dict[str, str]) -> None:
     args = [a for k, v in env.items() for a in ("-e", f"{k}={v}")]
-    code, _, err = await ash("docker", "run", "-d", "--name", name, "--network", NETWORK, "--memory", "4g",
+    code, _, err = await ash("docker", "run", "-d", "--init", "--name", name, "--network", NETWORK, "--memory", "4g",
                              "--cpus", "2", "--pids-limit", "512", *args, image, "sleep", "infinity")
     if code != 0:
         raise RuntimeError(f"cannot start {name}: {err.strip()}")
