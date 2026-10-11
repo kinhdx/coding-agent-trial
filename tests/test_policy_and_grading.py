@@ -99,12 +99,13 @@ def test_summary_counts_resolved_runs_and_cost():
 
 
 def test_ledger_totals_keep_runs_apart_and_skip_unbilled_requests(tmp_path):
-    def call(run, model, cost):
+    def call(run, model, cost, **extra):
         return json.dumps({"run": run, "model": model, "status": 200, "cost_usd": cost, "input": 10,
-                           "cache_read": 0, "cache_write": 0, "output": 5}) + "\n"
+                           "cache_read": 0, "cache_write": 0, "output": 5, **extra}) + "\n"
     (tmp_path / "calls.jsonl").write_text(
         call("a.t.h.1", "m", 0.5) + call("a.t.h.1", None, None) + call("a.t.h.1", "m", None)
-        + call("b.t.h.1", "m", 2.0), encoding="utf-8")
+        + call("a.t.h.1", "m", None, complete=False) + call("b.t.h.1", "m", 2.0), encoding="utf-8")
     totals = ledger_totals(tmp_path, "a.t.h.1")
-    assert (totals["model_calls"], totals["unpriced_calls"], totals["cost_usd"]) == (2, 1, 0.5)
+    assert (totals["model_calls"], totals["unpriced_calls"], totals["closed_early_calls"], totals["cost_usd"]) \
+        == (3, 1, 1, 0.5)
     assert spent(tmp_path) == 2.5

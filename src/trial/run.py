@@ -93,7 +93,10 @@ def ledger_totals(ledger: Path, run_id: str) -> dict:
         "model_calls": len(inference),
         "models": sorted({c["model"] for c in inference}),
         "failed_calls": sum(1 for c in calls if c["status"] >= 400),
-        "unpriced_calls": sum(1 for c in inference if c["cost_usd"] is None),
+        # A stream the harness closed before the final usage chunk has an unknown cost; ledger lines written
+        # before the gateway recorded "complete" count as unpriced.
+        "closed_early_calls": sum(1 for c in inference if c["cost_usd"] is None and c.get("complete") is False),
+        "unpriced_calls": sum(1 for c in inference if c["cost_usd"] is None and c.get("complete") is not False),
         "input_tokens": sum(c["input"] for c in calls),
         "cache_read_tokens": sum(c["cache_read"] for c in calls),
         "cache_write_tokens": sum(c["cache_write"] for c in calls),

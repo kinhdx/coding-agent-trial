@@ -28,7 +28,8 @@ def test_key_is_injected_and_call_is_priced(tmp_path):
     assert seen[0].headers["x-api-key"] == "real-key"
     assert "authorization" not in seen[0].headers
     entry = json.loads((tmp_path / "calls.jsonl").read_text(encoding="utf-8"))
-    assert entry["run"] == "run-1" and entry["usage_found"]
+    assert entry["run"] == "run-1" and entry["usage_found"] and entry["complete"]
+    assert not entry["stream"] and not entry["stream_usage"]
     assert entry["cost_usd"] == (1000 * 2.0 + 100 * 10.0) / 1_000_000
 
 

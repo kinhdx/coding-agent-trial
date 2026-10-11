@@ -85,32 +85,39 @@ def create_app(ledger: Ledger, keys: dict[str, str], transport: httpx.AsyncBaseT
         captured = bytearray()
 
         async def relay():
+            complete = False
             try:
                 async for chunk in upstream.aiter_raw():
                     captured.extend(chunk)
                     yield chunk
+                complete = True
             finally:
                 await upstream.aclose()
-                _settle(run_id, provider, rest, body, bytes(captured), upstream, started)
+                _settle(run_id, provider, rest, body, bytes(captured), upstream, started, complete)
 
         out_headers = {k: v for k, v in upstream.headers.items()
                        if k.lower() not in {"content-length", "transfer-encoding", "connection"}}
         return StreamingResponse(relay(), status_code=upstream.status_code, headers=out_headers)
 
-    def _settle(run_id, provider, rest, request_body, response_body, upstream, started) -> None:
+    def _settle(run_id, provider, rest, request_body, response_body, upstream, started, complete) -> None:
         usage = usage_from_body(response_body)
         try:
-            requested = json.loads(request_body).get("model") if request_body else None
-        except (json.JSONDecodeError, AttributeError):
-            requested = None
-        model = requested or model_from(payloads(response_body))
+            sent = json.loads(request_body) if request_body else {}
+        except json.JSONDecodeError:
+            sent = {}
+        sent = sent if isinstance(sent, dict) else {}
+        model = sent.get("model") or model_from(payloads(response_body))
         price = cost(usage, model, PRICES) if usage.found else None
         ledger.record(ledger.calls, {
             "ts": time.time(), "run": run_id, "provider": provider, "path": rest, "model": model,
             "status": upstream.status_code, "seconds": round(time.monotonic() - started, 3),
             "usage_found": usage.found, "input": usage.input, "cache_read": usage.cache_read,
             "cache_write": usage.cache_write, "output": usage.output,
-            "cost_usd": round(price, 6) if price is not None else None})
+            "cost_usd": round(price, 6) if price is not None else None,
+            # A call can come back without usage when the client closes the stream early, or when a chat
+            # completions stream does not ask for the final usage chunk.
+            "complete": complete, "stream": bool(sent.get("stream")),
+            "stream_usage": bool((sent.get("stream_options") or {}).get("include_usage"))})
 
     async def health(_: Request) -> Response:
         return JSONResponse({"spent_usd": round(ledger.spent, 4), "budget_usd": ledger.budget})

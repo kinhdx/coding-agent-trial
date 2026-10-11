@@ -33,6 +33,7 @@ def summarise(runs: list[dict]) -> list[dict]:
             "cost_usd": cost,
             "cost_per_resolved": cost / len(resolved) if resolved else None,
             "median_agent_s": _median([r["agent_seconds"] for r in rs if r.get("agent_seconds")]),
+            "median_setup_s": _median([r["setup_seconds"] for r in rs if r.get("setup_seconds")]),
             "median_tool_calls": _median([r["tool_calls"] for r in rs]),
             "out_of_scope_runs": sum(1 for r in rs if r["grade"]["out_of_scope"]),
             "regressions": sum(1 for r in rs if r["grade"]["applied"] and r["grade"]["hidden_total"]
@@ -42,6 +43,7 @@ def summarise(runs: list[dict]) -> list[dict]:
             "errors": sum(1 for r in rs if r.get("error")),
             "time_limit": sum(1 for r in rs if r.get("stop_reason") == "time_limit"),
             "unpriced_calls": sum(r.get("unpriced_calls", 0) for r in rs),
+            "closed_early_calls": sum(r.get("closed_early_calls", 0) for r in rs),
         })
     return rows
 
@@ -63,9 +65,17 @@ def render(trial_dir: Path) -> str:
                      f"| {row['cost_usd']:.2f} | {per} | {row['median_agent_s']} | {row['median_tool_calls']} "
                      f"| {row['out_of_scope_runs']} | {row['regressions']} | {row['egress_denied_runs']} "
                      f"| {row['errors']} | {row['time_limit']} |")
+    if any(row["median_setup_s"] for row in rows):
+        lines += ["", "Median session setup before the agent's turn, mostly the adapter installing its CLI in the "
+                  "sandbox (s): " + ", ".join(f"{row['harness']} {row['median_setup_s']}"
+                                             for row in rows if row["median_setup_s"])]
     if any(row["unpriced_calls"] for row in rows):
         lines += ["", "Unpriced model calls (no usage in the response or no price entry): "
                   + ", ".join(f"{row['harness']} {row['unpriced_calls']}" for row in rows if row["unpriced_calls"])]
+    if any(row["closed_early_calls"] for row in rows):
+        lines += ["", "Model calls the harness closed before the provider sent usage (cost unknown, not in the "
+                  "totals): " + ", ".join(f"{row['harness']} {row['closed_early_calls']}"
+                                          for row in rows if row["closed_early_calls"])]
     lines += ["", "## By task", "", "| Task | " + " | ".join(harnesses) + " |",
               "|---|" + "---|" * len(harnesses)]
     cells: dict[tuple[str, str], list[str]] = defaultdict(list)
