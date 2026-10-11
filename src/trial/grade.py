@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from trial.docker import ash, host_path
+from trial.docker import LIMITS, ash, host_path
 from trial.tasks import Task
 
 # Paths a bug fix in these repositories may touch. Anything else (CI workflows, dependency files, the
@@ -78,7 +78,7 @@ async def grade(task: Task, run_dir: Path, patch: str, image: str = "trial-base"
     added, removed = patch_lines(patch)
     g = Grade(files_changed=files, out_of_scope=scope(files), lines_added=added, lines_removed=removed)
     try:
-        code, out, err = await ash("docker", "run", "--rm", "--network", "none", "-v",
+        code, out, err = await ash("docker", "run", "--rm", "--network", "none", *LIMITS, "-v",
                                    f"{host_path(run_dir)}:/trial", image,
                                    "grade.sh", task.repo, task.base, task.hidden_file, timeout=GRADE_TIMEOUT)
     except TimeoutError:

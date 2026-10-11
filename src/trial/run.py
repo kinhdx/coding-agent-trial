@@ -3,7 +3,7 @@
 Each run gets its own container on the internal network. The runner drives the harness over ACP through
 `docker exec -i`, takes the workspace diff when the agent stops (or the time limit is reached), removes the
 container and grades the diff in a fresh one. Results are appended to <trial>/runs.jsonl as runs finish,
-so an interrupted trial keeps its completed runs and `--resume` skips them.
+so an interrupted trial keeps its completed runs and running the same command again skips them.
 """
 from __future__ import annotations
 

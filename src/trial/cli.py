@@ -91,6 +91,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command in ("run", "run-agent") and not re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.name):
         parser.error("trial name: lower-case letters, digits and hyphens (it is part of URLs and container names)")
+    if args.command in ("run", "run-agent"):
+        fitted = docker.safe_concurrency(args.concurrency)
+        if fitted < args.concurrency:
+            print(f"concurrency {args.concurrency} lowered to {fitted} to fit the Docker VM's memory")
+            args.concurrency = fitted
     if args.command == "run-agent":
         jobs = [(t, AGENT_HARNESSES[h], n) for n in range(1, args.attempts + 1) for t in load_all(args.task)
                 for h in args.harness]

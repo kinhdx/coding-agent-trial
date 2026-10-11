@@ -11,6 +11,10 @@ from trial.tasks import load_all
 
 NETWORK = "trial-net"  # --internal: no route out except through the gateway
 GATEWAY = "gateway"
+# Every sandbox and grading container gets the same hard limit with no swap, so a runaway process is killed
+# inside its container instead of pushing the Docker VM, and with it the host, into swapping.
+CONTAINER_MEMORY = "2g"
+LIMITS = ("--memory", CONTAINER_MEMORY, "--memory-swap", CONTAINER_MEMORY, "--cpus", "2", "--pids-limit", "512")
 KEY_VARS = ("ANTHROPIC_API_KEY", "XAI_API_KEY", "DEEPSEEK_API_KEY")
 
 
@@ -66,10 +70,20 @@ def stop_gateway() -> None:
 
 async def start_sandbox(name: str, image: str, env: dict[str, str]) -> None:
     args = [a for k, v in env.items() for a in ("-e", f"{k}={v}")]
-    code, _, err = await ash("docker", "run", "-d", "--init", "--name", name, "--network", NETWORK, "--memory", "4g",
-                             "--cpus", "2", "--pids-limit", "512", *args, image, "sleep", "infinity")
+    code, _, err = await ash("docker", "run", "-d", "--init", "--name", name, "--network", NETWORK, *LIMITS,
+                             *args, image, "sleep", "infinity")
     if code != 0:
         raise RuntimeError(f"cannot start {name}: {err.strip()}")
+
+
+def safe_concurrency(requested: int) -> int:
+    """Each concurrent run can hold a sandbox and a grading container at once. Keep their limits, plus about a
+    gigabyte for the gateway and the VM itself, inside the memory the Docker VM has."""
+    out = sh("docker", "info", "--format", "{{.MemTotal}}", check=False).stdout.strip()
+    if not out.isdigit():
+        return requested
+    per_run = 2 * int(CONTAINER_MEMORY.rstrip("g")) * 1024**3
+    return max(1, min(requested, (int(out) - 1024**3) // per_run))
 
 
 async def remove(name: str) -> None:
