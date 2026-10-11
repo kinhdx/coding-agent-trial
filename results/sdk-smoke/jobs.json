@@ -1,0 +1,45 @@
+{
+  "gateway": "http://gateway:8080",
+  "placeholderKey": "sk-sandbox-placeholder",
+  "image": "trial-harness-agent",
+  "network": "trial-net",
+  "runsDir": "/results/sdk-smoke/runs",
+  "concurrency": 2,
+  "timeLimitSeconds": 600.0,
+  "jobs": [
+    {
+      "run": "sdk-smoke.registry-deprecation-block.sdk-claude-code.1",
+      "repo": "agent-asset-registry",
+      "base": "c7360d0",
+      "harness": "claude-code",
+      "model": "claude-sonnet-5-5",
+      "prompt": "You are working in a Python repository checked out at /work. Fix the issue described below.\nDependencies are installed; run the test suite with `uv run pytest`. There is no network access.\nChange the code and add or update tests as you see fit, but do not commit.\n\nIssue:\nAn asset can be marked maturity: deprecated without saying what replaces it or when it will be\nremoved. The README says a deprecated asset must carry a deprecation block, but validation accepts\nthe manifest.\n\nExpected behaviour of check():\n- A deprecated asset without a deprecation block is reported as a problem whose message contains\n  \"deprecation block\".\n- Deprecated assets that have the block, and assets at other maturity levels, are unaffected.",
+      "sandboxEnv": {
+        "HTTPS_PROXY": "http://sdk-smoke.registry-deprecation-block.sdk-claude-code.1@gateway:3128",
+        "HTTP_PROXY": "http://sdk-smoke.registry-deprecation-block.sdk-claude-code.1@gateway:3128",
+        "https_proxy": "http://sdk-smoke.registry-deprecation-block.sdk-claude-code.1@gateway:3128",
+        "http_proxy": "http://sdk-smoke.registry-deprecation-block.sdk-claude-code.1@gateway:3128",
+        "NO_PROXY": "gateway",
+        "no_proxy": "gateway",
+        "NODE_USE_ENV_PROXY": "1"
+      }
+    },
+    {
+      "run": "sdk-smoke.registry-deprecation-block.sdk-grok-build.1",
+      "repo": "agent-asset-registry",
+      "base": "c7360d0",
+      "harness": "grok-build",
+      "model": "grok-build-0.1",
+      "prompt": "You are working in a Python repository checked out at /work. Fix the issue described below.\nDependencies are installed; run the test suite with `uv run pytest`. There is no network access.\nChange the code and add or update tests as you see fit, but do not commit.\n\nIssue:\nAn asset can be marked maturity: deprecated without saying what replaces it or when it will be\nremoved. The README says a deprecated asset must carry a deprecation block, but validation accepts\nthe manifest.\n\nExpected behaviour of check():\n- A deprecated asset without a deprecation block is reported as a problem whose message contains\n  \"deprecation block\".\n- Deprecated assets that have the block, and assets at other maturity levels, are unaffected.",
+      "sandboxEnv": {
+        "HTTPS_PROXY": "http://sdk-smoke.registry-deprecation-block.sdk-grok-build.1@gateway:3128",
+        "HTTP_PROXY": "http://sdk-smoke.registry-deprecation-block.sdk-grok-build.1@gateway:3128",
+        "https_proxy": "http://sdk-smoke.registry-deprecation-block.sdk-grok-build.1@gateway:3128",
+        "http_proxy": "http://sdk-smoke.registry-deprecation-block.sdk-grok-build.1@gateway:3128",
+        "NO_PROXY": "gateway",
+        "no_proxy": "gateway",
+        "NODE_USE_ENV_PROXY": "1"
+      }
+    }
+  ]
+}
