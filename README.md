@@ -126,6 +126,12 @@ results/               ledger, one record per run and the reports (run folders w
 docs/decisions/        why it is built this way
 ```
 
+## Harness radar
+
+[docs/harness-radar.md](docs/harness-radar.md) turns the results into a call per harness: Claude Code and
+Grok Build in Trial, dsh in Assess, with what would change each call. The three configurations are
+registered in [agent-asset-registry](https://github.com/kinhdx/agent-asset-registry/blob/main/CATALOG.md).
+
 ## Decisions
 
 - [0001: The gateway holds the keys, the sandbox gets placeholders](docs/decisions/0001-gateway-holds-the-keys.md)
